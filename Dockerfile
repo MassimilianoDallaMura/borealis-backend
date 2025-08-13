@@ -19,9 +19,9 @@ COPY src ./src
 # Questo risolve l'errore di connessione al database durante il build
 RUN mvn clean install -DskipTests
 
-# --- SOLUZIONE ALL'ERRORE: Usa un'immagine JRE slim esistente ---
+# --- SOLUZIONE ALL'ERRORE: Usa l'immagine JRE supportata di Eclipse Temurin ---
 # Usa un'immagine JRE più leggera per la fase di runtime finale
-FROM openjdk:17-jre-slim-bullseye
+FROM eclipse-temurin:17-jre-focal
 
 # Imposta la directory di lavoro per l'applicazione
 WORKDIR /app
