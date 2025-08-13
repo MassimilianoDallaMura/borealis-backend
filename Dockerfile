@@ -1,27 +1,34 @@
-# Utilizza un'immagine base con OpenJDK 17 e Maven
-# Questa immagine include già il JDK e Maven, risolvendo il problema di 'mvn: command not found'
-# Ho corretto il tag dell'immagine da '3.8.6-openjdk-17' a '3-openjdk-17' per risolvere l'errore 'not found'
-FROM maven:3-openjdk-17
+# Usa un'immagine Maven con OpenJDK 17 come base per la fase di build
+FROM maven:3-openjdk-17 AS build
 
 # Imposta la directory di lavoro all'interno del container
 WORKDIR /app
 
-# Copia il pom.xml e installa le dipendenze per velocizzare i rebuild successivi
-# Questo passo evita di riscaricare le dipendenze ad ogni build, se non sono cambiate
+# Copia il file pom.xml per scaricare le dipendenze
+# Questo passaggio è ottimizzato per sfruttare il caching di Docker
 COPY pom.xml .
+
+# Scarica tutte le dipendenze in modo che non debbano essere scaricate ogni volta
+# Questo comando evita di riscaricare le dipendenze se il pom.xml non cambia
 RUN mvn dependency:go-offline -B
 
 # Copia il codice sorgente
 COPY src ./src
 
-# Esegui il comando di build di Maven per compilare il progetto e creare il file JAR
-# -DskipTests salta i test unitari per velocizzare la build
+# --- SOLUZIONE ALL'ERRORE: Salta i test durante la compilazione ---
+# Esegui la fase di clean e package, saltando i test che richiedono il DB
+# Questo risolve l'errore di connessione al database durante il build
 RUN mvn clean install -DskipTests
 
-# Espone la porta su cui l'applicazione Spring Boot sarà in ascolto
-# La porta standard per le applicazioni Spring è 8080
-EXPOSE 8080
+# Usa un'immagine JRE più leggera per la fase di runtime finale
+FROM openjdk:17-jre-slim
 
-# Questo è il comando che viene eseguito all'avvio del container
-# Avvia l'applicazione usando il file JAR generato
-ENTRYPOINT ["java", "-jar", "target/backend-0.0.1-SNAPSHOT.jar"]
+# Imposta la directory di lavoro per l'applicazione
+WORKDIR /app
+
+# Copia il file JAR generato dalla fase di build nella fase di runtime
+# L'estrazione del nome del file JAR viene fatta automaticamente
+COPY --from=build /app/target/*.jar app.jar
+
+# Specifica il comando che verrà eseguito all'avvio del container
+ENTRYPOINT ["java", "-jar", "app.jar"]
