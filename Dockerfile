@@ -1,6 +1,7 @@
 # Utilizza un'immagine base con OpenJDK 17 e Maven
 # Questa immagine include già il JDK e Maven, risolvendo il problema di 'mvn: command not found'
-FROM maven:3.8.6-openjdk-17
+# Ho corretto il tag dell'immagine da '3.8.6-openjdk-17' a '3-openjdk-17' per risolvere l'errore 'not found'
+FROM maven:3-openjdk-17
 
 # Imposta la directory di lavoro all'interno del container
 WORKDIR /app
