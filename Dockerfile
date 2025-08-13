@@ -15,13 +15,13 @@ RUN mvn dependency:go-offline -B
 # Copia il codice sorgente
 COPY src ./src
 
-# --- SOLUZIONE ALL'ERRORE: Salta i test durante la compilazione ---
 # Esegui la fase di clean e package, saltando i test che richiedono il DB
 # Questo risolve l'errore di connessione al database durante il build
 RUN mvn clean install -DskipTests
 
+# --- SOLUZIONE ALL'ERRORE: Usa un'immagine JRE slim esistente ---
 # Usa un'immagine JRE più leggera per la fase di runtime finale
-FROM openjdk:17-jre-slim
+FROM openjdk:17-jre-slim-bullseye
 
 # Imposta la directory di lavoro per l'applicazione
 WORKDIR /app
