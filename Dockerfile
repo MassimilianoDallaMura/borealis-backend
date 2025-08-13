@@ -1,34 +1,38 @@
-# Usa un'immagine Maven con OpenJDK 17 come base per la fase di build
-FROM maven:3-openjdk-17 AS build
+#====================
+# STADIO 1: BUILD
+# Questo stadio serve solo per compilare l'applicazione
+# e creare il file JAR. Verrà scartato alla fine.
+#====================
+# Utilizziamo un'immagine Maven con JDK 17 per compilare il progetto.
+# 'AS build' serve a dare un nome a questo stadio.
+FROM maven:3.8.3-openjdk-17 AS build
 
-# Imposta la directory di lavoro all'interno del container
-WORKDIR /app
+# Copia l'intero progetto nella cartella di lavoro all'interno del container.
+COPY . .
 
-# Copia il file pom.xml per scaricare le dipendenze
-# Questo passaggio è ottimizzato per sfruttare il caching di Docker
-COPY pom.xml .
-
-# Scarica tutte le dipendenze in modo che non debbano essere scaricate ogni volta
-# Questo comando evita di riscaricare le dipendenze se il pom.xml non cambia
-RUN mvn dependency:go-offline -B
-
-# Copia il codice sorgente
-COPY src ./src
-
-# Esegui la fase di clean e package, saltando i test che richiedono il DB
-# Questo risolve l'errore di connessione al database durante il build
+# Esegui il build Maven per compilare il codice e creare il JAR.
+# 'mvn clean install' pulisce, compila e installa l'applicazione nel repository locale.
 RUN mvn clean install -DskipTests
 
-# --- SOLUZIONE ALL'ERRORE: Usa l'immagine JRE supportata di Eclipse Temurin ---
-# Usa un'immagine JRE più leggera per la fase di runtime finale
-FROM eclipse-temurin:17-jre-focal
+#====================
+# STADIO 2: PACKAGE
+# Questo stadio crea l'immagine finale, che sarà molto più leggera
+# perché contiene solo il runtime (JDK) e il file JAR.
+#====================
+# Utilizziamo un'immagine più piccola basata su Eclipse Temurin con JDK 17.
+# Questo è un runtime ottimizzato per i container.
+FROM eclipse-temurin:17-jdk
 
-# Imposta la directory di lavoro per l'applicazione
-WORKDIR /app
+# Copia il file JAR compilato dallo 'stadio di build' (il primo stadio).
+# La sintassi 'COPY --from=build' è fondamentale per il multi-stage build.
+# Sostituisci 'familyhub-0.0.1-SNAPSHOT.jar' con il nome effettivo del tuo file JAR.
+COPY --from=build /target/familyhub-0.0.1-SNAPSHOT.jar demo.jar
 
-# Copia il file JAR generato dalla fase di build nella fase di runtime
-# L'estrazione del nome del file JAR viene fatta automaticamente
-COPY --from=build /app/target/*.jar app.jar
+# Espone la porta su cui l'applicazione Spring Boot è in ascolto.
+# La porta predefinita per Spring Boot è 8080.
+EXPOSE 8080
 
-# Specifica il comando che verrà eseguito all'avvio del container
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Comando principale che verrà eseguito quando il container si avvia.
+# Esegue il file JAR utilizzando il comando 'java -jar'.
+# Sostituisci 'demo.jar' se hai dato un nome diverso al file JAR.
+ENTRYPOINT ["java", "-jar", "demo.jar"]
