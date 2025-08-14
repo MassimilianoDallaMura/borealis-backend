@@ -22,7 +22,6 @@ RUN mvn clean install -DskipTests
 FROM eclipse-temurin:17-jdk
 
 # Copia il file JAR dallo stadio di build.
-# Ho aggiornato il nome del file da 'familyhub...' a 'backend...'.
 COPY --from=build /app/target/backend-0.0.1-SNAPSHOT.jar demo.jar
 
 # Espone la porta su cui l'applicazione Spring Boot è in ascolto.
